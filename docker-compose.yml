@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  db-us:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_DB: incidents_us
+      POSTGRES_USER: incidentuser
+      POSTGRES_PASSWORD: incidentpass
+    volumes:
+      - db-us-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U incidentuser -d incidents_us"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  region-us:
+    build: .
+    ports:
+      - "3001:3000"
+    environment:
+      REGION_ID: us
+      PORT: 3000
+      DB_HOST: db-us
+      DB_PORT: 5432
+      DB_NAME: incidents_us
+      DB_USER: incidentuser
+      DB_PASS: incidentpass
+      PEER_URLS: "http://region-eu:3000,http://region-apac:3000"
+    depends_on:
+      db-us:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  db-eu:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_DB: incidents_eu
+      POSTGRES_USER: incidentuser
+      POSTGRES_PASSWORD: incidentpass
+    volumes:
+      - db-eu-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U incidentuser -d incidents_eu"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  region-eu:
+    build: .
+    ports:
+      - "3002:3000"
+    environment:
+      REGION_ID: eu
+      PORT: 3000
+      DB_HOST: db-eu
+      DB_PORT: 5432
+      DB_NAME: incidents_eu
+      DB_USER: incidentuser
+      DB_PASS: incidentpass
+      PEER_URLS: "http://region-us:3000,http://region-apac:3000"
+    depends_on:
+      db-eu:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  db-apac:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_DB: incidents_apac
+      POSTGRES_USER: incidentuser
+      POSTGRES_PASSWORD: incidentpass
+    volumes:
+      - db-apac-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U incidentuser -d incidents_apac"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  region-apac:
+    build: .
+    ports:
+      - "3003:3000"
+    environment:
+      REGION_ID: apac
+      PORT: 3000
+      DB_HOST: db-apac
+      DB_PORT: 5432
+      DB_NAME: incidents_apac
+      DB_USER: incidentuser
+      DB_PASS: incidentpass
+      PEER_URLS: "http://region-us:3000,http://region-eu:3000"
+    depends_on:
+      db-apac:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  db-us-data:
+  db-eu-data:
+  db-apac-data:
